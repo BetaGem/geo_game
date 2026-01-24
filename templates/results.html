@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>游戏结果</title>
+    <style>
+        /* 并列显示两张图 */
+        .chart-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .chart-box {
+            flex: 1;
+            max-width: 600px;
+            height: 400px;
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 6px 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h2>游戏结果</h2>
+
+<p><strong>平均得分：</strong> {{ "%.1f"|format(avg_score) }} / 100</p>
+
+{% if max_error_city %}
+<p>
+    <strong>最大偏差：</strong> {{ max_error_city.name }}（{{ "%.1f"|format(max_error_city.error) }} km）<br>
+    <strong>最小偏差：</strong> {{ min_error_city.name }}（{{ "%.1f"|format(min_error_city.error) }} km）
+</p>
+{% endif %}
+
+<!-- 用户输入 vs 正确答案表格 -->
+<table>
+    <tr>
+        <th>城市</th>
+        <th>你的输入</th>
+        <th>正确答案</th>
+        <th>偏差 (km)</th>
+        <th>得分</th>
+    </tr>
+    {% for r in results %}
+    <tr>
+        <td>{{ r.name }}</td>
+        <td>
+            {% if r.user_lat is not none %}
+            ({{ "%.1f"|format(r.user_lat) }}, {{ "%.1f"|format(r.user_lon) }})
+            {% else %}
+            未输入
+            {% endif %}
+        </td>
+        <td>
+            ({{ r.true_lat }}, {{ r.true_lon }})
+        </td>
+        <td>
+            {% if r.error is not none %}
+            {{ "%.1f"|format(r.error) }}
+            {% else %}
+            —
+            {% endif %}
+        </td>
+        <td>{{ "%.1f"|format(r.score) }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/restart">再玩一次</a>
+
+<!-- 并列图 -->
+<div class="chart-container">
+    <div class="chart-box">
+        <h3>城市偏移散点图 (km)</h3>
+        <canvas id="scatter"></canvas>
+    </div>
+    <div class="chart-box">
+        <h3>实际经纬度对比</h3>
+        <canvas id="map"></canvas>
+    </div>
+</div>
+
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// 左图：偏移散点图
+const scatterData = JSON.parse('{{ scatter_data_json | safe }}');
+
+const ctx = document.getElementById('scatter').getContext('2d');
+
+new Chart(ctx, {
+    type: 'scatter',
+    data: {
+        datasets: [{
+            label: '城市偏移 (km)',
+            data: scatterData,
+            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { min:-1500, max:1500, title:{display:true, text:'经度偏移 (km)'} },
+            y: { min:-1500, max:1500, title:{display:true, text:'纬度偏移 (km)'} }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const d = context.raw;
+                        return d.label + ': (' + d.x + ', ' + d.y + ') km';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 右图：实际经纬度对比
+const mapData = JSON.parse('{{ map_data_json | safe }}');
+
+const truePoints = mapData.map(d => ({
+    x: d.true_lon,
+    y: d.true_lat,
+    label: d.name
+}));
+
+const userPoints = mapData.map(d => ({
+    x: d.user_lon,
+    y: d.user_lat,
+    label: d.name
+}));
+
+const ctx2 = document.getElementById('map').getContext('2d');
+
+new Chart(ctx2, {
+    type: 'scatter',
+    data: {
+        datasets: [
+            {
+                label: '真实位置',
+                data: truePoints,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+            },
+            {
+                label: '用户输入',
+                data: userPoints,
+                backgroundColor: 'rgba(255, 99, 132, 0.7)'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { min:73, max:135, title:{display:true, text:'经度 (°E)'} },
+            y: { min:18, max:54, title:{display:true, text:'纬度 (°N)'} }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const d = context.raw;
+                        return d.label + ': (' + d.x + '°, ' + d.y + '°)';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>

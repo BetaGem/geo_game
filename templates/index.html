@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>中国城市经纬度挑战</title>
+</head>
+<body>
+
+<h2>中国城市经纬度估计（MVP版）</h2>
+
+<p>
+    中国大陆范围提示：<br>
+    纬度：{{ lat_range }} <br>
+    经度：{{ lon_range }}
+</p>
+
+<form method="post" action="/submit">
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>城市</th>
+            <th>纬度 (°)</th>
+            <th>经度 (°)</th>
+        </tr>
+        {% for city in cities %}
+        <tr>
+            <td>{{ city.name }}</td>
+            <td>
+                <input type="number"
+                       name="{{ city.name }}_lat"
+                       step="0.1"
+                       class="lat-input"
+                       placeholder="纬度">
+            </td>
+            <td>
+                <input type="number"
+                       name="{{ city.name }}_lon"
+                       step="0.1"
+                       class="lon-input"
+                       placeholder="经度">
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <button type="submit">提交答案</button>
+</form>
+
+</body>
+</html>
+
+<script>
+const LAT_MIN = 18, LAT_MAX = 54;
+const LON_MIN = 73, LON_MAX = 135;
+
+function validateInput(input, min, max) {
+    const val = parseFloat(input.value);
+    if (isNaN(val)) {
+        input.style.backgroundColor = "";
+        return;
+    }
+    if (val < min || val > max) {
+        input.style.backgroundColor = "#ffcccc";
+    } else {
+        input.style.backgroundColor = "";
+    }
+}
+
+document.querySelectorAll(".lat-input").forEach(input => {
+    input.addEventListener("input", () =>
+        validateInput(input, LAT_MIN, LAT_MAX)
+    );
+});
+
+document.querySelectorAll(".lon-input").forEach(input => {
+    input.addEventListener("input", () =>
+        validateInput(input, LON_MIN, LON_MAX)
+    );
+});
+</script>
