@@ -55,15 +55,16 @@ def index():
             selected = easy_cities
             selected += random.sample(medium_cities, n_cities - len(selected))
         elif difficulty == "normal":
-            # select random from city hard < 2 (10) + random from city_hard == 2 (2)
+            # select random from city hard < 2 (8) + random from city_hard == 2 (4)
             easy_medium_cities = [c for c in all_cities if c["hard"] < 2]
             hard_cities = [c for c in all_cities if c["hard"] == 2]
-            selected = random.sample(easy_medium_cities, n_cities - 2)
-            selected += random.sample(hard_cities, 2)
+            selected = random.sample(easy_medium_cities, n_cities - 4)
+            selected += random.sample(hard_cities, 4)
         else:  # hard
             # select random from hard cities
             hard_cities = [c for c in all_cities if c["hard"] == 2]
             selected = random.sample(hard_cities, n_cities)
+        random.shuffle(selected)
         
         session["city_order"] = [c["name"] for c in selected]
 
@@ -147,16 +148,16 @@ def submit():
                                r["true_lat"], r["true_lon"])
             r["dx"] = dx
             r["dy"] = dy
-            map_data.append({
-                "name": r["name"],
-                "true_lat": r["true_lat"],
-                "true_lon": r["true_lon"],
-                "user_lat": r["user_lat"],
-                "user_lon": r["user_lon"]
-            })
         else:
             r["dx"] = None
             r["dy"] = None
+        map_data.append({
+            "name": r["name"],
+            "true_lat": r["true_lat"],
+            "true_lon": r["true_lon"],
+            "user_lat": r["user_lat"],
+            "user_lon": r["user_lon"]
+        })
 
     if n_valid == 0:
         avg_score = 0.0
@@ -174,12 +175,22 @@ def submit():
     scatter_data_json = json.dumps(scatter_data, ensure_ascii=False)
     map_data_json = json.dumps(map_data, ensure_ascii=False)
 
+    comment = ""
     if avg_score > 90:
-        comment = "优秀！你的中国地理知识非常扎实！"
-    elif avg_score < 30:
-        comment = "成绩不理想！去看看地图，熟悉一下各大城市的地理位置吧！"
+        comment = "稳得离谱，你的地理知识可太扎实了。"
+    elif avg_score < 60:
+        comment = "没关系，地图这种东西就是用来反复看的。"
     else:
-        comment = ""
+        comment = "有准有偏，属于正常人类水平"
+        avg_dx = sum(r["dx"] for r in results if r["dx"] is not None) / max(1, len([r for r in results if r["dx"] is not None]))
+        if avg_dx > 110: orien = "东"
+        elif avg_dx < -110: orien = "西"
+        else: orien = ""
+        avg_dy = sum(r["dy"] for r in results if r["dy"] is not None) / max(1, len([r for r in results if r["dy"] is not None]))
+        if avg_dy > 110: orien += "北"
+        elif avg_dy < -110: orien += "南"
+        if orien != "":
+            comment += f"另外，你的城市定位整体偏{orien}了哦。"
     
     return render_template(
         "results.html",

@@ -81,6 +81,10 @@
           background: #4c6ef5;
           color: white;
         }
+        .diff-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
         .set_diff {
           border-top: 1px solid #ddd;
           border-bottom: 1px solid #ddd;
@@ -111,12 +115,12 @@
 </head>
 <body>
 
-<h2>🌍 中国城市经纬度挑战</h2>
+<h2>🌍 中国城市方向感挑战</h2>
 <p class="subtitle">
-    凭借你的直觉，填写下面这些随机城市的经纬度。保留小数点后一位即可。</p>
+    纯凭感觉，不看地图，来定位下面这些城市吧。经纬度最多保留小数点后一位。</p>
 
 <p class="range-hint">
-    提示：中国大陆大致范围<br>
+    小提示：中国大陆大致范围<br>
     纬度 18°N – 54°N ｜ 经度 73°E – 135°E
 </p>
 
@@ -146,13 +150,13 @@
     </label>
 
     <br><br>
-    <button type="submit">设置难度</button>
+    <button type="submit">确认难度</button>
   </form>
 </div>
 
 
 <div class="card" style="text-align:center;">
-  <button id="start-btn" class="primary-btn" >开始挑战</button>
+  <button id="start-btn" class="primary-btn" >开始定位</button>
 </div>
 <br>
 
@@ -203,12 +207,49 @@
   </div>
 </form>
 
-</body>
-</html>
 
 <script>
 let currentDifficulty = "normal";
 const diffBtns = document.querySelectorAll(".diff-btn");
+
+// 难度选择防护：开始作答后锁定难度，避免 city_order 被重置
+const diffForm = document.querySelector('form[action="/set_difficulty"]');
+const diffInputs = diffForm ? diffForm.querySelectorAll('input[name="difficulty"]') : [];
+const startBtn = document.getElementById('start-btn');
+let hasStarted = false;
+
+function lockDifficulty() {
+  diffInputs.forEach(input => {
+    input.disabled = true;
+    input.parentElement.style.opacity = 0.6;
+  });
+  if (diffForm) {
+    const setBtn = diffForm.querySelector('button[type="submit"]');
+    if (setBtn) {
+      setBtn.disabled = true;
+      setBtn.style.opacity = 0.6;
+      setBtn.title = '作答中不可切换难度';
+    }
+  }
+}
+
+// 点击开始或输入任意坐标后触发锁定
+if (startBtn) {
+  startBtn.addEventListener('click', () => {
+    hasStarted = true;
+    lockDifficulty();
+  });
+}
+
+const answerInputs = document.querySelectorAll('#city-section input[type="number"]');
+answerInputs.forEach(inp => {
+  inp.addEventListener('input', () => {
+    if (!hasStarted) {
+      hasStarted = true;
+      lockDifficulty();
+    }
+  });
+});
 
 diffBtns.forEach(btn => {
   btn.addEventListener("click", () => {
@@ -224,7 +265,6 @@ let timeLeft = TOTAL_TIME;
 let timer = null;
 let started = false;
 
-const startBtn = document.getElementById("start-btn");
 const timerBox = document.getElementById("timer-box");
 const timeSpan = document.getElementById("time-left");
 const citySection = document.getElementById("city-section");
@@ -256,7 +296,9 @@ startBtn.addEventListener("click", () => {
   }, 1000);
 });
 
-
 sessionStorage.removeItem("difficulty_set");
 
 </script>
+
+</body>
+</html>

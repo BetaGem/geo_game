@@ -74,8 +74,8 @@
 
         .chart-box {
             position: relative;
-            max-width: 500px;
-            height: 400px;
+            width: 450px;
+            height: 450px;
             flex: 1
         }
 
@@ -109,19 +109,26 @@
 <h2>挑战结果</h2>
 
 <p class="subtitle">
-    🌍 总体表现：{{ "%.1f"|format(avg_score) }} / 100
+    🌍 综合表现评分：{{ "%.1f"|format(avg_score) }} / 100
 </p>
 {% if comment %}
 <p style="text-align:center; font-size:16px; color:#4c6ef5; margin-bottom:20px;">
     {{ comment }}
 </p>
 {% endif %}
+
+<div class="card" style="text-align:center;">
+  <a href="/" class="play-again">再玩一次</a>
+</div>
+<br>
+
 {% if max_error_city %}
 <p style="text-align:center;">
-    🏆 最准城市：{{ min_error_city.name }}（偏离 {{ "%.0f"|format(min_error_city.error) }} km）<br>
-    🤯 最难城市：{{ max_error_city.name }}（偏离 {{ "%.0f"|format(max_error_city.error) }} km）
+    🏆 手感巅峰：{{ min_error_city.name }}（偏离 {{ "%.0f"|format(min_error_city.error) }} km）<br>
+    🤯 地理盲区：{{ max_error_city.name }}（偏离 {{ "%.0f"|format(max_error_city.error) }} km）
 </p>
 {% endif %}
+
 
 <table>
     <tr>
@@ -154,10 +161,6 @@
     </tr>
     {% endfor %}
 </table>
-
-<div class="card" style="text-align:center;">
-  <a href="/" class="play-again">再玩一次</a>
-</div>
 
 <div class="chart-container">
     <div class="chart-box">
@@ -212,8 +215,16 @@ new Chart(document.getElementById('scatter'), {
         },
 
         scales: {
-            x: { min: -1500, max: 1500 },
-            y: { min: -1500, max: 1500 }
+            x: {
+                min: -1500,
+                max: 1500,
+                title: { display: true, text: '东西方向偏离 (km)' }
+            },
+            y: {
+                min: -1500,
+                max: 1500,
+                title: { display: true, text: '南北方向偏离 (km)' }
+            }
         }
     }
 });
@@ -227,7 +238,7 @@ new Chart(document.getElementById('map'), {
     data: {
         datasets: [
             {
-                label: '真实城市',
+                label: '真实位置',
                 data: mapData.map(d => ({
                     x: d.true_lon,
                     y: d.true_lat,
@@ -265,8 +276,16 @@ new Chart(document.getElementById('map'), {
             }
         },
         scales: {
-            x: { min:73, max:135 },
-            y: { min:18, max:54 }
+            x: {
+                min: 73,
+                max: 135,
+                title: { display: true, text: '经度 (°E)' }
+            },
+            y: {
+                min: 18,
+                max: 54,
+                title: { display: true, text: '纬度 (°)' }
+            }
         }
     }
 });
