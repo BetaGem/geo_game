@@ -2,54 +2,135 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>游戏结果</title>
+    <title>挑战结果</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 并列显示两张图 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f7f9fc;
+            margin: 40px;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        table {
+            margin: 0 auto 20px auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        th {
+            background: #eef3ff;
+        }
+
+        th, td {
+            padding: 8px 14px;
+            text-align: center;
+        }
+
+        .btn-restart {
+            display: inline-block;
+            padding: 10px 24px;
+            background: #4c6ef5;
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 16px;
+        }
+
+        .btn-restart:hover {
+            background: #3b5bdb;
+        }
+
         .chart-container {
             display: flex;
             gap: 40px;
             flex-wrap: wrap;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-top: 40px;
         }
+
+        .chart-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+        }
+
+        .chart-card {
+          display: flex;
+          flex-direction: column;
+        }
+
         .chart-box {
-            flex: 1;
-            max-width: 600px;
+            position: relative;
+            max-width: 500px;
             height: 400px;
+            flex: 1
         }
-        table {
-            border-collapse: collapse;
-            margin-top: 20px;
+
+        @media (max-width: 900px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
         }
-        th, td {
-            border: 1px solid #333;
-            padding: 6px 10px;
-            text-align: center;
+
+        .play-again {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #4f7cff;
+            color: white;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 6px 16px rgba(79,124,255,0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+
+        .play-again:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(79,124,255,0.5);
         }
     </style>
 </head>
 <body>
 
-<h2>游戏结果</h2>
+<h2>挑战结果</h2>
 
-<p><strong>平均得分：</strong> {{ "%.1f"|format(avg_score) }} / 100</p>
-
+<p class="subtitle">
+    🌍 总体表现：{{ "%.1f"|format(avg_score) }} / 100
+</p>
+{% if comment %}
+<p style="text-align:center; font-size:16px; color:#4c6ef5; margin-bottom:20px;">
+    {{ comment }}
+</p>
+{% endif %}
 {% if max_error_city %}
-<p>
-    <strong>最大偏差：</strong> {{ max_error_city.name }}（{{ "%.1f"|format(max_error_city.error) }} km）<br>
-    <strong>最小偏差：</strong> {{ min_error_city.name }}（{{ "%.1f"|format(min_error_city.error) }} km）
+<p style="text-align:center;">
+    🏆 最准城市：{{ min_error_city.name }}（偏离 {{ "%.0f"|format(min_error_city.error) }} km）<br>
+    🤯 最难城市：{{ max_error_city.name }}（偏离 {{ "%.0f"|format(max_error_city.error) }} km）
 </p>
 {% endif %}
 
-<!-- 用户输入 vs 正确答案表格 -->
 <table>
     <tr>
         <th>城市</th>
-        <th>你的输入</th>
-        <th>正确答案</th>
-        <th>偏差 (km)</th>
-        <th>得分</th>
+        <th>你的估计</th>
+        <th>实际坐标</th>
+        <th>偏离距离 (km)</th>
     </tr>
+
     {% for r in results %}
     <tr>
         <td>{{ r.name }}</td>
@@ -57,7 +138,7 @@
             {% if r.user_lat is not none %}
             ({{ "%.1f"|format(r.user_lat) }}, {{ "%.1f"|format(r.user_lon) }})
             {% else %}
-            未输入
+            未作答
             {% endif %}
         </td>
         <td>
@@ -70,117 +151,126 @@
             —
             {% endif %}
         </td>
-        <td>{{ "%.1f"|format(r.score) }}</td>
     </tr>
     {% endfor %}
 </table>
 
-<br>
-<a href="/restart">再玩一次</a>
+<div class="card" style="text-align:center;">
+  <a href="/" class="play-again">再玩一次</a>
+</div>
 
-<!-- 并列图 -->
 <div class="chart-container">
     <div class="chart-box">
-        <h3>城市偏移散点图 (km)</h3>
+        <h3>你对城市位置的方向感</h3>
         <canvas id="scatter"></canvas>
     </div>
     <div class="chart-box">
-        <h3>实际经纬度对比</h3>
+        <h3>你的答案 vs 真实城市位置</h3>
         <canvas id="map"></canvas>
     </div>
 </div>
 
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<br><br>
 
 <script>
-// 左图：偏移散点图
 const scatterData = JSON.parse('{{ scatter_data_json | safe }}');
 
-const ctx = document.getElementById('scatter').getContext('2d');
-
-new Chart(ctx, {
+new Chart(document.getElementById('scatter'), {
     type: 'scatter',
     data: {
         datasets: [{
-            label: '城市偏移 (km)',
+            label: '方向偏离',
             data: scatterData,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+            backgroundColor: 'rgba(54,162,235,0.8)',
+            pointRadius: 5,
+            pointHoverRadius: 8
         }]
     },
     options: {
-        responsive: true,
         maintainAspectRatio: false,
-        scales: {
-            x: { min:-1500, max:1500, title:{display:true, text:'经度偏移 (km)'} },
-            y: { min:-1500, max:1500, title:{display:true, text:'纬度偏移 (km)'} }
+
+        interaction: {
+            mode: 'nearest',
+            intersect: true
         },
+
         plugins: {
             tooltip: {
+                enabled: true,
                 callbacks: {
                     label: function(context) {
                         const d = context.raw;
-                        return d.label + ': (' + d.x + ', ' + d.y + ') km';
+                        return d.city + '：(' +
+                               d.x.toFixed(0) + ', ' +
+                               d.y.toFixed(0) + ') km';
                     }
                 }
+            },
+            legend: {
+                display: false
             }
+        },
+
+        scales: {
+            x: { min: -1500, max: 1500 },
+            y: { min: -1500, max: 1500 }
         }
     }
 });
 
-// 右图：实际经纬度对比
+
+
 const mapData = JSON.parse('{{ map_data_json | safe }}');
 
-const truePoints = mapData.map(d => ({
-    x: d.true_lon,
-    y: d.true_lat,
-    label: d.name
-}));
-
-const userPoints = mapData.map(d => ({
-    x: d.user_lon,
-    y: d.user_lat,
-    label: d.name
-}));
-
-const ctx2 = document.getElementById('map').getContext('2d');
-
-new Chart(ctx2, {
+new Chart(document.getElementById('map'), {
     type: 'scatter',
     data: {
         datasets: [
             {
-                label: '真实位置',
-                data: truePoints,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                label: '真实城市',
+                data: mapData.map(d => ({
+                    x: d.true_lon,
+                    y: d.true_lat,
+                    city: d.name
+                })),
+                backgroundColor: 'rgba(54,162,235,0.7)',
+                pointRadius: 5,
+                pointHoverRadius: 8
             },
             {
-                label: '用户输入',
-                data: userPoints,
-                backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                label: '你的答案',
+                data: mapData.map(d => ({
+                    x: d.user_lon,
+                    y: d.user_lat,
+                    city: d.name
+                })),
+                backgroundColor: 'rgba(255,99,132,0.7)',
+                pointRadius: 5,
+                pointHoverRadius: 8
             }
         ]
     },
     options: {
-        responsive: true,
         maintainAspectRatio: false,
-        scales: {
-            x: { min:73, max:135, title:{display:true, text:'经度 (°E)'} },
-            y: { min:18, max:54, title:{display:true, text:'纬度 (°N)'} }
-        },
         plugins: {
             tooltip: {
                 callbacks: {
                     label: function(context) {
                         const d = context.raw;
-                        return d.label + ': (' + d.x + '°, ' + d.y + '°)';
+                        return d.city + '：(' +
+                               d.x.toFixed(1) + '°, ' +
+                               d.y.toFixed(1) + '°)';
                     }
                 }
             }
+        },
+        scales: {
+            x: { min:73, max:135 },
+            y: { min:18, max:54 }
         }
     }
 });
+
 </script>
 
 </body>

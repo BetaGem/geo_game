@@ -6,6 +6,8 @@ def haversine(lat1, lon1, lat2, lon2):
     """
     R = 6371.0  # 地球半径，单位 km
 
+    if None in (lat1, lon1, lat2, lon2):
+        return 6371 * math.pi  # 返回一个很大的距离，表示无效输入
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -27,5 +29,5 @@ def km_offset(user_lat, user_lon, true_lat, true_lon):
     # 经度每度 ~ cos(lat)*111 km
     avg_lat = (user_lat + true_lat) / 2
     delta_lon_km = (user_lon - true_lon) * 111.0 * math.cos(math.radians(avg_lat))
-    
+
     return delta_lon_km, delta_lat_km

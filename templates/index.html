@@ -2,79 +2,175 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>中国城市经纬度挑战</title>
+    <title>城市位置挑战</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f7f9fc;
+            margin: 40px;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        th {
+            background: #eef3ff;
+        }
+
+        th, td {
+            padding: 8px 14px;
+            text-align: center;
+        }
+
+        .range-hint {
+            text-align: center;
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .submit-box {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 10px 24px;
+            font-size: 16px;
+            background: #4c6ef5;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #3b5bdb;
+        }
+
+        input.invalid {
+            border: 2px solid red;
+        }
+    </style>
 </head>
 <body>
 
-<h2>中国城市经纬度估计（MVP版）</h2>
+<h2>🌍 中国城市经纬度挑战</h2>
+<p class="subtitle">
+    凭借你的直觉，填写下面这些城市的经纬度。保留小数点后一位即可。</p>
 
-<p>
-    中国大陆范围提示：<br>
-    纬度：{{ lat_range }} <br>
-    经度：{{ lon_range }}
+<div class="card" style="text-align:center;">
+  <button id="start-btn">开始挑战</button>
+</div>
+
+<p class="range-hint">
+    提示：中国大陆大致范围<br>
+    纬度 18°N – 54°N ｜ 经度 73°E – 135°E
 </p>
 
+<div id="timer-box" class="card" style="text-align:center;">
+  ⏳ 剩余时间：<span id="time-left">--</span> 秒
+    <div id="timeout-msg"
+     style="display:none; text-align:center; font-size:18px; color:#c0392b;">
+    <br>时间到！提交答案中…
+    </div>
+</div>
+<br>
+
 <form method="post" action="/submit">
-    <table border="1" cellpadding="6">
+
+  <!-- 👇 包住 table 的容器 -->
+  <div id="city-section" style="display:none;">
+
+    <table class="city-table">
+      <thead>
         <tr>
-            <th>城市</th>
-            <th>纬度 (°)</th>
-            <th>经度 (°)</th>
+          <th>城市</th>
+          <th>纬度（°）</th>
+          <th>经度（°）</th>
         </tr>
+      </thead>
+      <tbody>
         {% for city in cities %}
         <tr>
-            <td>{{ city.name }}</td>
-            <td>
-                <input type="number"
-                       name="{{ city.name }}_lat"
-                       step="0.1"
-                       class="lat-input"
-                       placeholder="纬度">
-            </td>
-            <td>
-                <input type="number"
-                       name="{{ city.name }}_lon"
-                       step="0.1"
-                       class="lon-input"
-                       placeholder="经度">
-            </td>
+          <td>{{ city.name }}</td>
+          <td>
+            <input type="number" step="0.1"
+                   name="lat_{{ city.name }}">
+          </td>
+          <td>
+            <input type="number" step="0.1"
+                   name="lon_{{ city.name }}">
+          </td>
         </tr>
         {% endfor %}
+      </tbody>
     </table>
 
     <br>
-    <button type="submit">提交答案</button>
+    <div class="card" style="text-align:center;">
+      <button type="submit">提交答案</button>
+    </div>
+
+  </div>
 </form>
 
 </body>
 </html>
 
 <script>
-const LAT_MIN = 18, LAT_MAX = 54;
-const LON_MIN = 73, LON_MAX = 135;
+const TOTAL_TIME = {{ total_time }};
+let timeLeft = TOTAL_TIME;
+let timer = null;
+let started = false;
 
-function validateInput(input, min, max) {
-    const val = parseFloat(input.value);
-    if (isNaN(val)) {
-        input.style.backgroundColor = "";
-        return;
+const startBtn = document.getElementById("start-btn");
+const timerBox = document.getElementById("timer-box");
+const timeSpan = document.getElementById("time-left");
+const citySection = document.getElementById("city-section");
+const form = document.querySelector("form");
+
+startBtn.addEventListener("click", () => {
+  if (started) return;
+  started = true;
+
+  // 显示计时 & 城市列表
+  timerBox.style.display = "block";
+  citySection.style.display = "block";
+
+  startBtn.disabled = true;
+  startBtn.textContent = "挑战进行中…";
+
+  timeSpan.textContent = timeLeft;
+
+  timer = setInterval(() => {
+    timeLeft--;
+    timeSpan.textContent = timeLeft;
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      document.getElementById("timeout-msg").style.display = "block";
+      setTimeout(() => {
+        form.submit();
+      }, 1000);
     }
-    if (val < min || val > max) {
-        input.style.backgroundColor = "#ffcccc";
-    } else {
-        input.style.backgroundColor = "";
-    }
-}
 
-document.querySelectorAll(".lat-input").forEach(input => {
-    input.addEventListener("input", () =>
-        validateInput(input, LAT_MIN, LAT_MAX)
-    );
-});
-
-document.querySelectorAll(".lon-input").forEach(input => {
-    input.addEventListener("input", () =>
-        validateInput(input, LON_MIN, LON_MAX)
-    );
+      }, 1000);
 });
 </script>
