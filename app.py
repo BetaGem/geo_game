@@ -17,7 +17,7 @@ def load_cities():
     return cities
 
 def calc_score(error):
-    """得分公式"""
+    """得分计算公式"""
     return min(100, max(0.0, (1000 - error) / 9))
 
 
@@ -125,8 +125,10 @@ def submit():
 
     if avg_score > 90:
         comment = "优秀！你的中国地理知识非常扎实！"
-    elif avg_score < 20:
+    elif avg_score < 30:
         comment = "成绩不理想！去看看地图，熟悉一下各大城市的地理位置吧！"
+    else:
+        comment = ""
     
     return render_template(
         "results.html",
