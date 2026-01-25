@@ -7,6 +7,14 @@ from geometry import *
 app = Flask(__name__)
 app.secret_key = "geo-game-dev-key"
 
+# 禁用缓存
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 DIFFICULTY_CONFIG = {
     "easy": {
         "label": "简单",
@@ -39,6 +47,7 @@ def calc_score(error):
 
 @app.route("/", methods=["GET"])
 def index():
+
     all_cities = load_cities()
 
     # 默认难度
@@ -94,9 +103,11 @@ def set_difficulty():
 
     return redirect("/")
 
-@app.route("/restart")
+@app.route("/restart", methods=["GET"])
 def restart():
-    session.clear()
+    # 只重置当前局的城市顺序，保留已选难度
+    print("3. Restarting game...")
+    session.pop("city_order", None)
     return redirect("/")
 
 @app.route("/submit", methods=["POST"])
@@ -176,12 +187,12 @@ def submit():
     map_data_json = json.dumps(map_data, ensure_ascii=False)
 
     comment = ""
-    if avg_score > 90:
+    if avg_score > 85:
         comment = "稳得离谱，你的地理知识可太扎实了。"
     elif avg_score < 60:
         comment = "没关系，地图这种东西就是用来反复看的。"
     else:
-        comment = "有准有偏，属于正常人类水平"
+        comment = "有准有偏，属于正常人类水平。"
         avg_dx = sum(r["dx"] for r in results if r["dx"] is not None) / max(1, len([r for r in results if r["dx"] is not None]))
         if avg_dx > 110: orien = "东"
         elif avg_dx < -110: orien = "西"
