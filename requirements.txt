@@ -1,0 +1,14 @@
+blinker
+click
+flask
+importlib_metadata
+itsdangerous
+Jinja2
+MarkupSafe
+packaging
+setuptools
+Werkzeug
+wheel
+zipp
+gunicorn
+serverless-wsgi
