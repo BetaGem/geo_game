@@ -7,7 +7,23 @@ from geometry import *
 app = Flask(__name__)
 app.secret_key = "geo-game-dev-key"
 
-N_CITIES = 15
+DIFFICULTY_CONFIG = {
+    "easy": {
+        "label": "简单",
+        "n_cities": 7,
+        "time_per_city": 30
+    },
+    "normal": {
+        "label": "普通",
+        "n_cities": 12,
+        "time_per_city": 30
+    },
+    "hard": {
+        "label": "困难",
+        "n_cities": 20,
+        "time_per_city": 25
+    }
+}
 
 # ---------- 工具函数 ----------
 
@@ -25,22 +41,57 @@ def calc_score(error):
 def index():
     all_cities = load_cities()
 
+    # 默认难度
+    difficulty = session.get("difficulty", "easy")
+    config = DIFFICULTY_CONFIG[difficulty]
+
     if "city_order" not in session:
-        selected = random.sample(all_cities, N_CITIES)
+        print("1. Selecting cities for new game...")
+        n_cities = config["n_cities"]
+        if difficulty == "easy":
+            # select all city_hard == 0 (3) + random from city_hard == 1 (4)
+            easy_cities = [c for c in all_cities if c["hard"] == 0]
+            medium_cities = [c for c in all_cities if c["hard"] == 1]
+            selected = easy_cities
+            selected += random.sample(medium_cities, n_cities - len(selected))
+        elif difficulty == "normal":
+            # select random from city hard < 2 (10) + random from city_hard == 2 (2)
+            easy_medium_cities = [c for c in all_cities if c["hard"] < 2]
+            hard_cities = [c for c in all_cities if c["hard"] == 2]
+            selected = random.sample(easy_medium_cities, n_cities - 2)
+            selected += random.sample(hard_cities, 2)
+        else:  # hard
+            # select random from hard cities
+            hard_cities = [c for c in all_cities if c["hard"] == 2]
+            selected = random.sample(hard_cities, n_cities)
+        
         session["city_order"] = [c["name"] for c in selected]
 
-    # 根据 session 顺序恢复城市对象
     name_to_city = {c["name"]: c for c in all_cities}
     cities = [name_to_city[name] for name in session["city_order"]]
+
+    total_time = int(len(cities) * config["time_per_city"])
 
     return render_template(
         "index.html",
         cities=cities,
-        lat_range="18°N – 54°N",
-        lon_range="73°E – 135°E",
-        total_time=len(cities) * 2
+        difficulty=difficulty,
+        difficulty_config=DIFFICULTY_CONFIG,
+        total_time=total_time
     )
 
+@app.route("/set_difficulty", methods=["POST"])
+def set_difficulty():
+    print("2. Setting difficulty...")
+    difficulty = request.form.get("difficulty", "easy")
+
+    if difficulty not in DIFFICULTY_CONFIG:
+        difficulty = "easy"
+
+    session.clear()
+    session["difficulty"] = difficulty
+
+    return redirect("/")
 
 @app.route("/restart")
 def restart():

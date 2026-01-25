@@ -67,22 +67,94 @@
         input.invalid {
             border: 2px solid red;
         }
+        .diff-btn {
+          padding: 8px 18px;
+          margin: 0 6px;
+          border-radius: 16px;
+          border: 1px solid #ccc;
+          background: white;
+          cursor: pointer;
+          color: #333
+        }
+        
+        .diff-btn.active {
+          background: #4c6ef5;
+          color: white;
+        }
+        .set_diff {
+          border-top: 1px solid #ddd;
+          border-bottom: 1px solid #ddd;
+          padding: 18px 0;
+          margin: 25px 0;
+        }
+        .primary-btn {
+          background: #ff6b35;        /* 橙色，行动感最强 */
+          color: white;
+          font-size: 18px;            /* 比其他按钮大 */
+          padding: 12px 36px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: bold;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .primary-btn:hover {
+          background: #e85a2a;
+        }
+
+        .primary-btn:active {
+          transform: translateY(1px);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
 
 <h2>🌍 中国城市经纬度挑战</h2>
 <p class="subtitle">
-    凭借你的直觉，填写下面这些城市的经纬度。保留小数点后一位即可。</p>
-
-<div class="card" style="text-align:center;">
-  <button id="start-btn">开始挑战</button>
-</div>
+    凭借你的直觉，填写下面这些随机城市的经纬度。保留小数点后一位即可。</p>
 
 <p class="range-hint">
     提示：中国大陆大致范围<br>
     纬度 18°N – 54°N ｜ 经度 73°E – 135°E
 </p>
+
+<div class="set_diff" style="text-align:center; margin-bottom:20px;">
+  <form method="post" action="/set_difficulty">
+    <p class="subtitle">
+      当前难度：{{ difficulty_config[difficulty].label }} ｜ 
+      城市数：{{ cities|length }} ｜ 
+      限时：{{ total_time }} 秒
+    </p>
+    <label>
+      <input type="radio" name="difficulty" value="easy"
+        {% if difficulty == "easy" %}checked{% endif %}>
+      简单
+    </label>
+
+    <label style="margin:0 15px;">
+      <input type="radio" name="difficulty" value="normal"
+        {% if difficulty == "normal" %}checked{% endif %}>
+      普通
+    </label>
+
+    <label>
+      <input type="radio" name="difficulty" value="hard"
+        {% if difficulty == "hard" %}checked{% endif %}>
+      困难
+    </label>
+
+    <br><br>
+    <button type="submit">设置难度</button>
+  </form>
+</div>
+
+
+<div class="card" style="text-align:center;">
+  <button id="start-btn" class="primary-btn" >开始挑战</button>
+</div>
+<br>
 
 <div id="timer-box" class="card" style="text-align:center;">
   ⏳ 剩余时间：<span id="time-left">--</span> 秒
@@ -93,7 +165,7 @@
 </div>
 <br>
 
-<form method="post" action="/submit">
+<form method="post" action="/submit" id="game-form">
 
   <!-- 👇 包住 table 的容器 -->
   <div id="city-section" style="display:none;">
@@ -135,6 +207,18 @@
 </html>
 
 <script>
+let currentDifficulty = "normal";
+const diffBtns = document.querySelectorAll(".diff-btn");
+
+diffBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    diffBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentDifficulty = btn.dataset.diff;
+    console.log("当前选择难度 =", currentDifficulty);
+  });
+});
+
 const TOTAL_TIME = Number("{{ total_time }}");
 let timeLeft = TOTAL_TIME;
 let timer = null;
@@ -144,13 +228,12 @@ const startBtn = document.getElementById("start-btn");
 const timerBox = document.getElementById("timer-box");
 const timeSpan = document.getElementById("time-left");
 const citySection = document.getElementById("city-section");
-const form = document.querySelector("form");
+const form = document.querySelector("#game-form");
 
 startBtn.addEventListener("click", () => {
   if (started) return;
   started = true;
 
-  // 显示计时 & 城市列表
   timerBox.style.display = "block";
   citySection.style.display = "block";
 
@@ -170,7 +253,10 @@ startBtn.addEventListener("click", () => {
         form.submit();
       }, 1000);
     }
-
-      }, 1000);
+  }, 1000);
 });
+
+
+sessionStorage.removeItem("difficulty_set");
+
 </script>
